@@ -1,5 +1,5 @@
 ﻿# Get server names from file
-$server_names = Get-Content "C:\Zabbix_agent_share\hosts.txt"
+$server_names = Get-Content "C:\Zabbix_agent_deploy\hosts.txt"
 # Date for report
 $Rundate = Get-Date -Format "dd.MM.yyyy-HH.mm"
 $(
@@ -7,7 +7,7 @@ Foreach ($server in $server_names)
 {
     $server_n = $server
     # Set locations of Zabbix Agent files
-    $source = "C:\Zabbix_agent_share\Agent-4.4.0-win-x64"
+    $source = "C:\Zabbix_agent_deploy\Agent-4.4.0-win-x64"
     $target = "\\$server_n\C$\Program Files\Zabbix Agent\"
     # Check if server is reachable
     $chconn = Test-Connection -Cn $server_n -Count 1 -Quiet
@@ -20,7 +20,8 @@ Foreach ($server in $server_names)
         $date = Get-Date -Format "dd.MM.yyyy HH:mm";
         Write-Host 'Files copy success on'$server_n 'at' $date -ForegroundColor DarkGreen -BackgroundColor White
         # Start deploy script on remote host
-        Invoke-Command -ComputerName $server_n -ScriptBlock { 
+        Invoke-Command -ComputerName $server_n -ScriptBlock 
+        { 
             # Check if Zabbix Agent is installed and running, if not start the service.
             If (get-service -Name "Zabbix Agent" -ErrorAction SilentlyContinue | Where-Object -Property Status -eq "Running")
             {
@@ -37,7 +38,7 @@ Foreach ($server in $server_names)
             # Create firewall rule
             New-NetFirewallRule -DisplayName "Zabbix Agent Allow" -Direction Inbound -LocalPort Any -Protocol Any -Program "C:\Program Files\Zabbix Agent\bin\zabbix_agentd.exe" -Action Allow
             # Create service
-            New-Service -Name "Zabbix Agent" -BinaryPathName "C:\Program Files\Zabbix Agent\bin\zabbix_agentd.exe --config C:\Program Files\Zabbix Agent\conf\zabbix_agentd.conf" -DisplayName "Zabbix Agent" -Description "Provides system monitoring" -StartupType "Automatic" -ErrorAction SilentlyContinue
+            New-Service -Name "Zabbix Agent" -BinaryPathName '"C:\Program Files\Zabbix Agent\bin\zabbix_agentd.exe" --config "C:\Program Files\Zabbix Agent\conf\zabbix_agentd.conf"' -DisplayName "Zabbix Agent" -Description "Provides system monitoring" -StartupType "Automatic" -ErrorAction SilentlyContinue
             # Start service
             (Get-WmiObject win32_service -Filter "name='Zabbix Agent'").StartService()
             #Start-Service "Zabbix Agent"
@@ -47,4 +48,4 @@ Foreach ($server in $server_names)
     {
         Write-Host $server_n 'unreachable' -ForegroundColor Black -BackgroundColor White
     }
-}) *>&1 > "C:\Zabbix_agent_share\Reports\Report_$Rundate.txt"
+}) *>&1 > "C:\Zabbix_agent_deploy\Reports\Report_$Rundate.txt"
